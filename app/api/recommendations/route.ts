@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 import { getValidYouTubeVideoId } from '@/lib/getValidYoutubeVideo';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+function getOpenAIClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+}
 
 async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string; }[]> {
   const prompt = `Give me a list of 10 songs similar to "${title}" by "${artist}". Format each as: Title - Artist.`;
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages: [{ role: 'user', content: prompt }],
