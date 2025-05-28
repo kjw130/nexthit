@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "types": ["@types/node"],      // ✅ Add this if missing
+    // "moduleResolution": "node",
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,

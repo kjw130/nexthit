@@ -3,11 +3,9 @@
 import React, { useState, useEffect } from 'react';
 
 interface Song {
-  id: string;
   title: string;
   artist: string;
-  preview_url?: string;
-  image?: string;
+  youtubeEmbedUrl?: string;
 }
 
 export default function Home() {
@@ -91,39 +89,43 @@ export default function Home() {
 
       {/* Results */}
       {hasSubmitted && currentSong ? (
-        <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex items-center justify-between gap-4">
-          <button
-            onClick={() => handleVote(false)}
-            className="text-red-400 hover:text-red-500 font-bold text-lg"
-          >
-            Miss
-          </button>
-
-          <div className="flex flex-col items-center gap-2">
-            {currentSong.image ? (
-              <img src={currentSong.image} alt="Album cover" className="w-64 h-64 rounded-md object-cover" />
-            ) : (
-              <div className="w-64 h-64 bg-zinc-700 rounded-md flex items-center justify-center text-gray-400">
-                No Image
-              </div>
-            )}
-            <div className="text-center mt-2">
-              <div className="font-semibold">{currentSong.title}</div>
-              <div className="text-sm text-gray-400">{currentSong.artist}</div>
-              {currentSong.preview_url ? (
-                <audio controls src={currentSong.preview_url} className="mt-2" />
-              ) : (
-                <div className="text-xs text-gray-500 mt-2">No preview available</div>
-              )}
-            </div>
+        <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex flex-col gap-4 items-center">
+          <div className="text-center">
+            <div className="font-semibold text-xl">{currentSong.title}</div>
+            <div className="text-sm text-gray-400">{currentSong.artist}</div>
           </div>
 
-          <button
-            onClick={() => handleVote(true)}
-            className="text-green-400 hover:text-green-500 font-bold text-lg"
-          >
-            Hit
-          </button>
+          {currentSong.youtubeEmbedUrl ? (
+            <iframe
+              width="360"
+              height="215"
+              src={currentSong.youtubeEmbedUrl}
+              title="YouTube video preview"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="rounded-md"
+            />
+          ) : (
+            <div className="w-64 h-64 bg-zinc-700 rounded-md flex items-center justify-center text-gray-400">
+              No preview found
+            </div>
+          )}
+
+          <div className="flex justify-between w-full mt-4">
+            <button
+              onClick={() => handleVote(false)}
+              className="text-red-400 hover:text-red-500 font-bold text-lg"
+            >
+              Miss
+            </button>
+
+            <button
+              onClick={() => handleVote(true)}
+              className="text-green-400 hover:text-green-500 font-bold text-lg"
+            >
+              Hit
+            </button>
+          </div>
         </div>
       ) : hasSubmitted && !currentSong ? (
         <p className="text-gray-400 mt-8">No matching songs found. Try a different input.</p>
