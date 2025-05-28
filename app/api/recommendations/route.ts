@@ -8,7 +8,7 @@ function getOpenAIClient() {
 }
 
 async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string; }[]> {
-  const prompt = `Give me a list of 10 songs similar to "${title}" by "${artist}". Format each as: Title - Artist.`;
+  const prompt = `Suggest 3 songs that are similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of (Those) songs where you encounter once a month and it causes you to keep replaying and replaying because it clicks and they love it so much. This query is to find new songs that fit that bill. Respond as a JSON array of { "title": string, "artist": string }.`;
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
