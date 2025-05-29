@@ -8,6 +8,28 @@ interface Song {
   youtubeEmbedUrl?: string;
 }
 
+const logMetric = async (eventType: string, songId = '', details = '') => {
+  const sessionId = localStorage.getItem('session-id') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('session-id', id);
+    return id;
+  })();
+
+await fetch('https://script.google.com/macros/s/AKfycbzbeSGj9o4j_NLCjhfqz5qmNIvMvkP0hDYLAjwnt9gcgvJ8NcG0RgEgZcV7Iy-F5tPE4Q/exec', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  },
+  body: new URLSearchParams({
+    eventType,
+    sessionId,
+    songId,
+    details,
+  }),
+});
+
+};
+
 export default function Home() {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -19,6 +41,8 @@ export default function Home() {
     e.preventDefault();
     setHasSubmitted(true);
     setCurrentIndex(0);
+
+    logMetric('search', '', `title: ${title}, artist: ${artist}`);
 
     try {
       const res = await fetch('/api/recommendations', {
@@ -44,15 +68,35 @@ export default function Home() {
   const handleVote = (liked: boolean) => {
     const currentSong = recommendations[currentIndex];
     console.log(`🗳️ Voted ${liked ? 'Hit' : 'Miss'} for ${currentSong.title} by ${currentSong.artist}`);
+    logMetric('vote', currentSong.title, liked ? 'liked' : 'disliked');
+
+    if (currentIndex + 1 >= recommendations.length) {
+      logMetric('completed_recommendations');
+    }
+
     setCurrentIndex((prev) => prev + 1);
   };
 
   const currentSong = recommendations[currentIndex];
 
   useEffect(() => {
-    console.log('📦 Full recommendations array:', recommendations);
-    console.log('🎯 Current song:', currentSong);
-  }, [recommendations, currentIndex]);
+    logMetric('visit');
+    const start = Date.now();
+
+    const handleUnload = () => {
+      const duration = Math.floor((Date.now() - start) / 1000);
+      logMetric('time_on_site', '', `${duration}s`);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, []);
+
+  useEffect(() => {
+    if (currentSong?.youtubeEmbedUrl) {
+      logMetric('preview_loaded', currentSong.title, 'YouTube preview shown');
+    }
+  }, [currentIndex]);
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-16">
