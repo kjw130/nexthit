@@ -1,4 +1,3 @@
-// apps/web/app/api/recommendations/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 import { getValidYouTubeVideoId } from '@/lib/getValidYoutubeVideo';
@@ -7,8 +6,17 @@ function getOpenAIClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 }
 
+function containsProfanity(text: string): boolean {
+  const badWords = [
+    'fuck', 'shit', 'bitch', 'ass', 'cunt', 'nigger', 'faggot', 'rape', 'hitler',
+    'slut', 'dick', 'cock', 'whore', 'cunt'
+  ];
+  const lower = text.toLowerCase();
+  return badWords.some((word) => lower.includes(word));
+}
+
 async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string; }[]> {
-  const prompt = `Suggest 3 songs that are similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
+  const prompt = `Suggest 1 song that is similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
 
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
@@ -47,6 +55,11 @@ export async function POST(req: NextRequest) {
   const { title, artist } = await req.json();
   console.log('🎵 Request received:', title, artist);
 
+  if (containsProfanity(title) || containsProfanity(artist)) {
+    console.warn('🚫 Profanity detected. Rejecting request.');
+    return NextResponse.json({ error: 'Inappropriate input' }, { status: 400 });
+  }
+
   const suggestions = await generateSongSuggestions(title, artist);
   console.log('📜 Cleaned suggestions:', suggestions);
 
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
       console.warn(`❌ No valid YouTube video found for ${song.title} - ${song.artist}`);
     }
 
-    if (results.length >= 10) break;
+    if (results.length >= 1) break;
   }
 
   return NextResponse.json({ results });

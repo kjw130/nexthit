@@ -11,14 +11,12 @@ interface Song {
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const now = Date.now();
 
-  // 1. Get or generate persistent user ID
   let userId = localStorage.getItem('user-id');
   if (!userId) {
     userId = crypto.randomUUID();
     localStorage.setItem('user-id', userId);
   }
 
-  // 2. Get or refresh session ID (expires after 30 mins)
   const sessionData = localStorage.getItem('session-data');
   let sessionId: string;
 
@@ -35,7 +33,6 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
 
   localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
 
-  // 3. Logging payload
   const payload = {
     eventType,
     userId,
@@ -43,8 +40,6 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     songId,
     details,
   };
-
-  console.log('📤 Logging metric:', payload);
 
   try {
     const res = await fetch('/api/log', {
@@ -60,13 +55,14 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
   }
 };
 
-
 export default function Home() {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [recommendations, setRecommendations] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [profanityBlocked, setProfanityBlocked] = useState(false); // 🧠 NEW
 
   const currentSong = recommendations[currentIndex];
 
@@ -74,6 +70,8 @@ export default function Home() {
     e.preventDefault();
     setHasSubmitted(true);
     setCurrentIndex(0);
+    setLoading(true);
+    setProfanityBlocked(false);
     logMetric('search', '', `title: ${title}, artist: ${artist}`);
 
     try {
@@ -83,21 +81,27 @@ export default function Home() {
         body: JSON.stringify({ title, artist }),
       });
 
-      const { results } = await res.json();
-      console.log('🟢 Received results from API:', results);
-      if (!results || results.length === 0) {
-        console.warn('⚠️ No recommendations returned from API.');
+      if (res.status === 400) {
+        alert('Profanity detected. Please enter a different song or artist.');
+        setTitle('');
+        setArtist('');
+        setRecommendations([]);
+        setProfanityBlocked(true); // used to suppress "no results" message
+        return;
       }
+
+      const { results } = await res.json();
       setRecommendations(results || []);
     } catch (error) {
       console.error('❌ Error fetching recommendations:', error);
       setRecommendations([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVote = (liked: boolean) => {
     if (!currentSong) return;
-    console.log(`🗳️ Voted ${liked ? 'Hit' : 'Miss'} for ${currentSong.title} by ${currentSong.artist}`);
     logMetric('vote', currentSong.title, liked ? 'liked' : 'disliked');
 
     if (currentIndex + 1 >= recommendations.length) {
@@ -158,7 +162,11 @@ export default function Home() {
         </button>
       </form>
 
-      {hasSubmitted && currentSong ? (
+      {loading && (
+        <div className="text-gray-400 animate-pulse mb-6">Loading your song...</div>
+      )}
+
+      {hasSubmitted && currentSong && !loading ? (
         <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex flex-col gap-4 items-center">
           <div className="text-center">
             <div className="font-semibold text-xl">{currentSong.title}</div>
@@ -190,7 +198,7 @@ export default function Home() {
             </button>
           </div>
         </div>
-      ) : hasSubmitted && !currentSong ? (
+      ) : hasSubmitted && !loading && !currentSong && !profanityBlocked ? (
         <p className="text-gray-400 mt-8">No matching songs found. Try a different input.</p>
       ) : null}
     </main>
