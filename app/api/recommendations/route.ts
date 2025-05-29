@@ -9,13 +9,13 @@ function getOpenAIClient() {
 function containsProfanity(text: string): boolean {
   const badWords = [
     'fuck', 'shit', 'bitch', 'ass', 'cunt', 'nigger', 'faggot', 'rape', 'hitler',
-    'slut', 'dick', 'cock', 'whore', 'cunt'
+    'slut', 'dick', 'cock', 'whore'
   ];
   const lower = text.toLowerCase();
   return badWords.some((word) => lower.includes(word));
 }
 
-async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string; }[]> {
+async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string }[]> {
   const prompt = `Suggest 1 song that is similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
 
   const openai = getOpenAIClient();
@@ -33,7 +33,6 @@ async function generateSongSuggestions(title: string, artist: string): Promise<{
     parsed = JSON.parse(raw);
   } catch (err) {
     console.warn('⚠️ GPT output not valid JSON. Trying fallback parse...');
-
     parsed = raw
       .split('\n')
       .map((line) => line.replace(/^[-*\d.]+\s*/, '').trim())
@@ -64,23 +63,38 @@ export async function POST(req: NextRequest) {
   console.log('📜 Cleaned suggestions:', suggestions);
 
   const results = [];
+
   for (const song of suggestions) {
     const query = `${song.title} ${song.artist}`;
-    const embedUrl = await getValidYouTubeVideoId(query);
+    try {
+      const embedUrl = await getValidYouTubeVideoId(query);
 
-    if (embedUrl) {
-      results.push({
-        id: embedUrl,
-        title: song.title,
-        artist: song.artist,
-        youtubeEmbedUrl: embedUrl,
-      });
-      console.log(`✅ Found embed: ${embedUrl} for ${song.title} - ${song.artist}`);
-    } else {
-      console.warn(`❌ No valid YouTube video found for ${song.title} - ${song.artist}`);
+      if (embedUrl) {
+        results.push({
+          id: embedUrl,
+          title: song.title,
+          artist: song.artist,
+          youtubeEmbedUrl: embedUrl,
+        });
+        console.log(`✅ Found embed: ${embedUrl} for ${song.title} - ${song.artist}`);
+      } else {
+        console.warn(`❌ No valid YouTube video found for ${song.title} - ${song.artist}`);
+      }
+
+      if (results.length >= 1) break;
+    } catch (err: any) {
+      console.error(`❌ YouTube API failed:`, err?.message || err);
+
+      // YouTube quota or key error
+      const message = err?.message?.toLowerCase();
+      const isQuota = message?.includes('quota') || message?.includes('daily') || err?.response?.status === 403;
+
+      if (isQuota) {
+        return NextResponse.json({ error: 'API_LIMIT_REACHED' }, { status: 429 });
+      } else {
+        return NextResponse.json({ error: 'YOUTUBE_API_ERROR' }, { status: 500 });
+      }
     }
-
-    if (results.length >= 1) break;
   }
 
   return NextResponse.json({ results });

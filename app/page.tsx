@@ -22,32 +22,19 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
 
   if (sessionData) {
     const { id, timestamp } = JSON.parse(sessionData);
-    if (now - timestamp < 30 * 60 * 1000) {
-      sessionId = id;
-    } else {
-      sessionId = crypto.randomUUID();
-    }
+    sessionId = now - timestamp < 30 * 60 * 1000 ? id : crypto.randomUUID();
   } else {
     sessionId = crypto.randomUUID();
   }
 
   localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
 
-  const payload = {
-    eventType,
-    userId,
-    sessionId,
-    songId,
-    details,
-  };
-
   try {
     const res = await fetch('/api/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
     });
-
     const data = await res.json();
     console.log('✅ Metric logged response:', data);
   } catch (err) {
@@ -62,7 +49,13 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [profanityBlocked, setProfanityBlocked] = useState(false); // 🧠 NEW
+  const [profanityBlocked, setProfanityBlocked] = useState(false);
+  const [apiCapReached, setApiCapReached] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [email, setEmail] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
 
   const currentSong = recommendations[currentIndex];
 
@@ -72,6 +65,7 @@ export default function Home() {
     setCurrentIndex(0);
     setLoading(true);
     setProfanityBlocked(false);
+    setApiCapReached(false);
     logMetric('search', '', `title: ${title}, artist: ${artist}`);
 
     try {
@@ -86,7 +80,14 @@ export default function Home() {
         setTitle('');
         setArtist('');
         setRecommendations([]);
-        setProfanityBlocked(true); // used to suppress "no results" message
+        setProfanityBlocked(true);
+        return;
+      }
+
+      if (res.status === 429) {
+        console.warn('🔒 API limit reached.');
+        setApiCapReached(true);
+        setRecommendations([]);
         return;
       }
 
@@ -109,17 +110,31 @@ export default function Home() {
     }
 
     setCurrentIndex((prev) => prev + 1);
+    setShowFeedbackForm(true);
+  };
+
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await logMetric('feedback', currentSong?.title || '', JSON.stringify({ email, feedback: feedbackText }));
+    setFeedbackSubmitted(true);
+    setFeedbackText('');
+    setEmail('');
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await logMetric('waitlist_email', '', email);
+    setEmailSubmitted(true);
+    setEmail('');
   };
 
   useEffect(() => {
     logMetric('visit');
     const start = Date.now();
-
     const handleUnload = () => {
       const duration = Math.floor((Date.now() - start) / 1000);
       logMetric('time_on_site', '', `${duration}s`);
     };
-
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
@@ -162,11 +177,38 @@ export default function Home() {
         </button>
       </form>
 
-      {loading && (
-        <div className="text-gray-400 animate-pulse mb-6">Loading your song...</div>
+      {loading && <div className="text-gray-400 animate-pulse mb-6">Loading your song...</div>}
+
+      {apiCapReached && (
+        <div className="text-center bg-zinc-800 p-6 rounded-xl w-full max-w-xl mt-6">
+          <p className="text-red-400 font-semibold text-lg mb-4">
+            We’ve reached our daily API limit.
+          </p>
+          <p className="text-gray-300 mb-4">
+            Unfortunately we’ve hit our free-tier YouTube API cap for the day.
+            Please try again tomorrow. If you'd like to get notified about project updates or expanded availability, leave your email below.
+          </p>
+
+          {!emailSubmitted ? (
+            <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
+              <input
+                type="email"
+                placeholder="Your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+              />
+              <button type="submit" className="py-2 px-4 bg-blue-500 hover:bg-blue-600 transition text-white rounded-md">
+                Join Waitlist
+              </button>
+            </form>
+          ) : (
+            <p className="text-green-400 mt-4 text-sm">Thanks — you're on the list!</p>
+          )}
+        </div>
       )}
 
-      {hasSubmitted && currentSong && !loading ? (
+      {hasSubmitted && currentSong && !loading && !apiCapReached ? (
         <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex flex-col gap-4 items-center">
           <div className="text-center">
             <div className="font-semibold text-xl">{currentSong.title}</div>
@@ -191,14 +233,39 @@ export default function Home() {
 
           <div className="flex justify-between w-full mt-4">
             <button onClick={() => handleVote(false)} className="text-red-400 hover:text-red-500 font-bold text-lg">
-              Miss
+              Dislike 👎
             </button>
             <button onClick={() => handleVote(true)} className="text-green-400 hover:text-green-500 font-bold text-lg">
-              Hit
+              Like 👍
             </button>
           </div>
+
+          {showFeedbackForm && !feedbackSubmitted && (
+            <form onSubmit={handleFeedbackSubmit} className="mt-6 w-full flex flex-col gap-4">
+              <input
+                type="email"
+                placeholder="Your email (optional)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+              />
+              <textarea
+                placeholder="Got feedback or a feature idea?"
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+              />
+              <button type="submit" className="py-2 px-4 bg-blue-500 hover:bg-blue-600 transition text-white rounded-md">
+                Submit Feedback
+              </button>
+            </form>
+          )}
+
+          {feedbackSubmitted && (
+            <p className="text-green-400 text-sm mt-4">Thanks! We'll keep you posted.</p>
+          )}
         </div>
-      ) : hasSubmitted && !loading && !currentSong && !profanityBlocked ? (
+      ) : hasSubmitted && !loading && !currentSong && !profanityBlocked && !apiCapReached ? (
         <p className="text-gray-400 mt-8">No matching songs found. Try a different input.</p>
       ) : null}
     </main>
