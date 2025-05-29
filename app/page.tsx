@@ -8,17 +8,12 @@ interface Song {
   youtubeEmbedUrl?: string;
 }
 
-const METRIC_TOKEN = process.env.NEXT_PUBLIC_METRIC_TOKEN!;
-
-
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const now = Date.now();
-
   let userId = localStorage.getItem('user-id');
   if (!userId) {
     userId = crypto.randomUUID();
     localStorage.setItem('user-id', userId);
-    console.log('[Metric] New user ID generated:', userId);
   }
 
   const sessionData = localStorage.getItem('session-data');
@@ -30,41 +25,30 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     sessionId = crypto.randomUUID();
   }
   localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
-  console.log('[Metric] Session ID:', sessionId);
 
-  const payload = {
-    eventType,
-    userId,
-    sessionId,
-    songId,
-    details,
-  };
+  const token = process.env.NEXT_PUBLIC_METRIC_TOKEN; // <- this must be inlined at build time
 
-  console.log('[Metric] Sending events:', payload);
-  console.log('[Metric] Token:', METRIC_TOKEN);
+  console.log('[Metric] Token:', token); // Check this prints the right token
 
   try {
     const res = await fetch('/api/log', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-METRIC-TOKEN': METRIC_TOKEN,
+        'X-METRIC-TOKEN': token || '',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
     });
 
     console.log('[Metric] Response status:', res.status);
-
     const json = await res.json();
     console.log('[Metric] Response JSON:', json);
-
-    if (!res.ok) {
-      console.warn('[Metric] Metric logging failed:', json);
-    }
   } catch (err) {
-    console.error('[Metric] Fetch error:', err);
+    console.log('[Metric] Metric logging failed:', err);
   }
 };
+
+
 
 
 export default function Home() {
