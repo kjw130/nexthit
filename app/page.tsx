@@ -8,6 +8,7 @@ interface Song {
   youtubeEmbedUrl?: string;
 }
 
+// ✅ Debug-enhanced logging function
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const sessionId = localStorage.getItem('session-id') || (() => {
     const id = crypto.randomUUID();
@@ -15,27 +16,29 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     return id;
   })();
 
-const logMetric = async (eventType: string, songId = '', details = '') => {
-  const sessionId = localStorage.getItem('session-id') || (() => {
-    const id = crypto.randomUUID();
-    localStorage.setItem('session-id', id);
-    return id;
-  })();
+  const payload = {
+    eventType,
+    sessionId,
+    songId,
+    details,
+  };
 
-  await fetch('/api/log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      eventType,
-      sessionId,
-      songId,
-      details,
-    }),
-  });
+  console.log('📤 Logging metric:', payload);
+
+  try {
+    const res = await fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    console.log('✅ Metric logged response:', data);
+  } catch (err) {
+    console.error('❌ Metric logging failed:', err);
+  }
 };
 
-
-};
 
 export default function Home() {
   const [title, setTitle] = useState('');

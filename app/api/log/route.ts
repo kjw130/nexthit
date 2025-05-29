@@ -10,12 +10,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { eventType, sessionId, songId, details } = body;
 
-    if (!eventType || !sessionId || !songId) {
+    if (!eventType || !sessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const metric = await prisma.metric.create({
-      data: { eventType, sessionId, songId, details },
+      data: {
+        eventType,
+        sessionId,
+        songId: songId || '',
+        details: details || '',
+      },
     });
 
     return NextResponse.json(metric, { status: 200 });
