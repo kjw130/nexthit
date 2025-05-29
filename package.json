@@ -2,12 +2,11 @@
   "name": "nexthit",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+"scripts": {
+  "build": "./vercel-build.sh",
+  "start": "next start",
+  "dev": "next dev"
+},
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "jsdom": "^26.1.0",
