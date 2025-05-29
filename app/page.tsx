@@ -150,6 +150,17 @@ export default function Home() {
         Give us a song you love and we’ll find your next favourite song
       </p>
 
+{process.env.NEXT_PUBLIC_DEV_MODE === 'true' && (
+  <button
+    onClick={() => setApiCapReached(true)}
+    className="mb-6 text-sm text-blue-400 underline hover:text-blue-300"
+  >
+    [Dev] Show API Cap Message
+  </button>
+)}
+
+
+
       <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 mb-12 w-full max-w-md">
         <input
           type="text"
