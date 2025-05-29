@@ -40,7 +40,7 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     details,
   };
 
-  console.log('[Metric] Sending event:', payload);
+  console.log('[Metric] Sending events:', payload);
   console.log('[Metric] Token:', METRIC_TOKEN);
 
   try {
