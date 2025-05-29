@@ -9,13 +9,41 @@ interface Song {
 }
 
 const logMetric = async (eventType: string, songId = '', details = '') => {
-  const sessionId = localStorage.getItem('session-id') || (() => {
-    const id = crypto.randomUUID();
-    localStorage.setItem('session-id', id);
-    return id;
-  })();
+  const now = Date.now();
 
-  const payload = { eventType, sessionId, songId, details };
+  // 1. Get or generate persistent user ID
+  let userId = localStorage.getItem('user-id');
+  if (!userId) {
+    userId = crypto.randomUUID();
+    localStorage.setItem('user-id', userId);
+  }
+
+  // 2. Get or refresh session ID (expires after 30 mins)
+  const sessionData = localStorage.getItem('session-data');
+  let sessionId: string;
+
+  if (sessionData) {
+    const { id, timestamp } = JSON.parse(sessionData);
+    if (now - timestamp < 30 * 60 * 1000) {
+      sessionId = id;
+    } else {
+      sessionId = crypto.randomUUID();
+    }
+  } else {
+    sessionId = crypto.randomUUID();
+  }
+
+  localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
+
+  // 3. Logging payload
+  const payload = {
+    eventType,
+    userId,
+    sessionId,
+    songId,
+    details,
+  };
+
   console.log('📤 Logging metric:', payload);
 
   try {
@@ -31,6 +59,7 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     console.error('❌ Metric logging failed:', err);
   }
 };
+
 
 export default function Home() {
   const [title, setTitle] = useState('');

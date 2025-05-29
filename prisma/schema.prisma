@@ -20,4 +20,5 @@ model Metric {
   sessionId  String
   songId     String
   details    String
+  userId     String
 }
