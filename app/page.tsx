@@ -10,7 +10,6 @@ interface Song {
 
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const now = Date.now();
-
   let userId = localStorage.getItem('user-id');
   if (!userId) {
     userId = crypto.randomUUID();
@@ -19,14 +18,12 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
 
   const sessionData = localStorage.getItem('session-data');
   let sessionId: string;
-
   if (sessionData) {
     const { id, timestamp } = JSON.parse(sessionData);
     sessionId = now - timestamp < 30 * 60 * 1000 ? id : crypto.randomUUID();
   } else {
     sessionId = crypto.randomUUID();
   }
-
   localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
 
   try {
@@ -51,6 +48,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [profanityBlocked, setProfanityBlocked] = useState(false);
   const [apiCapReached, setApiCapReached] = useState(false);
+  const [searchDisabled, setSearchDisabled] = useState(false);
+
+  const [hasVoted, setHasVoted] = useState(false);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [email, setEmail] = useState('');
@@ -61,11 +61,15 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (searchDisabled) return;
+    setSearchDisabled(true);
     setHasSubmitted(true);
+    setHasVoted(false);
     setCurrentIndex(0);
     setLoading(true);
     setProfanityBlocked(false);
     setApiCapReached(false);
+
     logMetric('search', '', `title: ${title}, artist: ${artist}`);
 
     try {
@@ -93,6 +97,10 @@ export default function Home() {
 
       const { results } = await res.json();
       setRecommendations(results || []);
+
+      if (!results || results.length === 0) {
+        logMetric('no_results', '', `title: ${title}, artist: ${artist}`);
+      }
     } catch (error) {
       console.error('❌ Error fetching recommendations:', error);
       setRecommendations([]);
@@ -104,13 +112,9 @@ export default function Home() {
   const handleVote = (liked: boolean) => {
     if (!currentSong) return;
     logMetric('vote', currentSong.title, liked ? 'liked' : 'disliked');
-
-    if (currentIndex + 1 >= recommendations.length) {
-      logMetric('completed_recommendations');
-    }
-
-    setCurrentIndex((prev) => prev + 1);
+    setHasVoted(true);
     setShowFeedbackForm(true);
+    setCurrentIndex(-1); // hide embed
   };
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
@@ -139,17 +143,9 @@ export default function Home() {
     return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
-  useEffect(() => {
-    if (currentSong?.youtubeEmbedUrl) {
-      logMetric('preview_loaded', currentSong.title, 'YouTube preview shown');
-    }
-  }, [currentIndex]);
-
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-16">
-      <h1 className="text-4xl font-bold text-center mb-4">
-        Find your next favourite song
-      </h1>
+      <h1 className="text-4xl font-bold text-center mb-4">Find your next favourite song</h1>
       <p className="text-lg text-gray-400 text-center max-w-xl mb-10">
         Give us a song you love and we’ll find your next favourite song
       </p>
@@ -171,7 +167,12 @@ export default function Home() {
         />
         <button
           type="submit"
-          className="w-full py-3 bg-green-500 text-black rounded-md font-semibold hover:bg-green-600 transition"
+          disabled={searchDisabled}
+          className={`w-full py-3 rounded-md font-semibold transition ${
+            searchDisabled
+              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : 'bg-green-500 text-black hover:bg-green-600'
+          }`}
         >
           Find Similar Songs
         </button>
@@ -181,12 +182,10 @@ export default function Home() {
 
       {apiCapReached && (
         <div className="text-center bg-zinc-800 p-6 rounded-xl w-full max-w-xl mt-6">
-          <p className="text-red-400 font-semibold text-lg mb-4">
-            We’ve reached our daily API limit.
-          </p>
+          <p className="text-red-400 font-semibold text-lg mb-4">We’ve reached our daily API limit.</p>
           <p className="text-gray-300 mb-4">
-            Unfortunately we’ve hit our free-tier YouTube API cap for the day.
-            Please try again tomorrow. If you'd like to get notified about project updates or expanded availability, leave your email below.
+            Unfortunately we’ve hit our free-tier YouTube API cap for the day. Please try again tomorrow.
+            If you'd like to get notified about project updates or expanded availability, leave your email below.
           </p>
 
           {!emailSubmitted ? (
@@ -208,7 +207,7 @@ export default function Home() {
         </div>
       )}
 
-      {hasSubmitted && currentSong && !loading && !apiCapReached ? (
+      {hasSubmitted && currentSong && !loading && !apiCapReached && !hasVoted && (
         <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex flex-col gap-4 items-center">
           <div className="text-center">
             <div className="font-semibold text-xl">{currentSong.title}</div>
@@ -239,35 +238,47 @@ export default function Home() {
               Like 👍
             </button>
           </div>
-
-          {showFeedbackForm && !feedbackSubmitted && (
-            <form onSubmit={handleFeedbackSubmit} className="mt-6 w-full flex flex-col gap-4">
-              <input
-                type="email"
-                placeholder="Your email (optional)"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
-              />
-              <textarea
-                placeholder="Got feedback or a feature idea?"
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
-              />
-              <button type="submit" className="py-2 px-4 bg-blue-500 hover:bg-blue-600 transition text-white rounded-md">
-                Submit Feedback
-              </button>
-            </form>
-          )}
-
-          {feedbackSubmitted && (
-            <p className="text-green-400 text-sm mt-4">Thanks! We'll keep you posted.</p>
-          )}
         </div>
-      ) : hasSubmitted && !loading && !currentSong && !profanityBlocked && !apiCapReached ? (
-        <p className="text-gray-400 mt-8">No matching songs found. Try a different input.</p>
-      ) : null}
+      )}
+
+      {hasVoted && showFeedbackForm && !feedbackSubmitted && (
+        <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 mt-6">
+          <form onSubmit={handleFeedbackSubmit} className="flex flex-col gap-4">
+            <input
+              type="email"
+              placeholder="Your email (optional)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+            />
+            <textarea
+              placeholder="Got feedback or a feature idea?"
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+            />
+            <button type="submit" className="py-2 px-4 bg-blue-500 hover:bg-blue-600 transition text-white rounded-md">
+              Submit Feedback
+            </button>
+          </form>
+        </div>
+      )}
+
+      {feedbackSubmitted && (
+        <p className="text-green-400 text-sm mt-6">🙏 Thank you for your feedback!</p>
+      )}
+
+      {hasSubmitted &&
+        !loading &&
+        !profanityBlocked &&
+        !apiCapReached &&
+        recommendations.length === 0 &&
+        !showFeedbackForm &&
+        !feedbackSubmitted && (
+          <p className="text-gray-400 mt-8">
+            No matching songs found. Try a different input.
+          </p>
+        )}
     </main>
   );
 }

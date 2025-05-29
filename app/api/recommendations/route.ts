@@ -16,7 +16,7 @@ function containsProfanity(text: string): boolean {
 }
 
 async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string }[]> {
-  const prompt = `Suggest 1 song that is similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
+  const prompt = `Suggest 1 songs that are similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
 
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
