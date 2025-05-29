@@ -23,7 +23,6 @@ export async function getYouTubeSongRecommendations(title: string, artist: strin
   try {
     songs = JSON.parse(raw);
   } catch (e) {
-    console.error("Failed to parse GPT response:", raw);
     return [];
   }
 

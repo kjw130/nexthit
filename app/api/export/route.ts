@@ -11,7 +11,7 @@ export async function GET() {
 
     return NextResponse.json(metrics);
   } catch (error) {
-    console.error('❌ Error exporting metrics:', error);
+    
     return NextResponse.json({ error: 'Failed to export metrics' }, { status: 500 });
   }
 }

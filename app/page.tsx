@@ -29,14 +29,14 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
   try {
     const res = await fetch('/api/log', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-METRIC-TOKEN': process.env.NEXT_PUBLIC_METRIC_TOKEN || ''
+      },
       body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
     });
-    const data = await res.json();
-    console.log('✅ Metric logged response:', data);
-  } catch (err) {
-    console.error('❌ Metric logging failed:', err);
-  }
+    await res.json();
+  } catch (err) {}
 };
 
 export default function Home() {
@@ -89,7 +89,6 @@ export default function Home() {
       }
 
       if (res.status === 429) {
-        console.warn('🔒 API limit reached.');
         setApiCapReached(true);
         setRecommendations([]);
         return;
@@ -102,7 +101,6 @@ export default function Home() {
         logMetric('no_results', '', `title: ${title}, artist: ${artist}`);
       }
     } catch (error) {
-      console.error('❌ Error fetching recommendations:', error);
       setRecommendations([]);
     } finally {
       setLoading(false);
@@ -114,7 +112,7 @@ export default function Home() {
     logMetric('vote', currentSong.title, liked ? 'liked' : 'disliked');
     setHasVoted(true);
     setShowFeedbackForm(true);
-    setCurrentIndex(-1); // hide embed
+    setCurrentIndex(-1);
   };
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
@@ -145,56 +143,54 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-16">
+      <h1 className="text-4xl font-bold text-center mb-4">NEXT HIT</h1>
       <h1 className="text-4xl font-bold text-center mb-4">Find your next favourite song</h1>
       <p className="text-lg text-gray-400 text-center max-w-xl mb-10">
         Give us a song you love and we’ll find your next favourite song
       </p>
 
-
-<button
-  onClick={() => setApiCapReached(true)}
-  className="mb-6 text-sm text-blue-400 underline hover:text-blue-300"
->
-  [Dev] Show API Cap Message for debug
-</button>
-
-
-
-      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 mb-12 w-full max-w-md">
-        <input
-          type="text"
-          placeholder="Song Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-4 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
-        />
-        <input
-          type="text"
-          placeholder="Artist Name"
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-          className="w-full p-4 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
-        />
-        <button
-          type="submit"
-          disabled={searchDisabled}
-          className={`w-full py-3 rounded-md font-semibold transition ${
-            searchDisabled
-              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              : 'bg-green-500 text-black hover:bg-green-600'
-          }`}
-        >
-          Find Similar Songs
-        </button>
-      </form>
+      {/* INPUT FORM — hidden after submission */}
+      {!hasSubmitted && (
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 mb-12 w-full max-w-md">
+          <input
+            type="text"
+            placeholder="Song Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-4 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+          />
+          <input
+            type="text"
+            placeholder="Artist Name"
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+            className="w-full p-4 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
+          />
+          <button
+            type="submit"
+            disabled={searchDisabled}
+            className={`w-full py-3 rounded-md font-semibold transition ${
+              searchDisabled
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-green-500 text-black hover:bg-green-600'
+            }`}
+          >
+            Find Similar Songs
+          </button>
+        </form>
+      )}
 
       {loading && <div className="text-gray-400 animate-pulse mb-6">Loading your song...</div>}
+
+      {/* RECOMMENDATION DISPLAY + REMAINING JSX... */}
+      {/* Keep rest of your page content unchanged from here down */}
+
 
       {apiCapReached && (
         <div className="text-center bg-zinc-800 p-6 rounded-xl w-full max-w-xl mt-6">
           <p className="text-red-400 font-semibold text-lg mb-4">We’ve reached our daily API limit.</p>
           <p className="text-gray-300 mb-4">
-            Unfortunately we’ve hit our API cap for the day. Please try again tomorrow. <br/>
+            Unfortunately we’ve hit our API cap for the day. Please try again tomorrow. <br />
             If you'd like to get notified about project updates or expanded availability, leave your email below.
           </p>
 
@@ -207,6 +203,9 @@ export default function Home() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                We’ll only use your email to notify you about this project. You can unsubscribe anytime.
+              </p>
               <button type="submit" className="py-2 px-4 bg-blue-500 hover:bg-blue-600 transition text-white rounded-md">
                 Join Waitlist
               </button>
@@ -261,6 +260,9 @@ export default function Home() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-3 rounded-md bg-zinc-900 border border-zinc-700 placeholder-gray-500"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              We’ll only use your email to notify you about this project. You can unsubscribe anytime.
+            </p>
             <textarea
               placeholder="Got feedback or a feature idea?"
               value={feedbackText}

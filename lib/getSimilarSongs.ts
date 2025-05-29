@@ -20,7 +20,7 @@ export async function getSimilarSongsFromGPT(title: string, artist: string) {
   try {
     return JSON.parse(text);
   } catch {
-    console.error("Failed to parse GPT response:", text);
+ 
     return [];
   }
 }

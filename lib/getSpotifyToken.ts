@@ -16,11 +16,8 @@ export async function getSpotifyAccessToken() {
 
   const data = await res.json();
 
-  // 🔍 Debug: Log token and response shape
-  console.log("🎟️ Spotify token:", data.access_token);
-  if (!data.access_token) {
-    console.error("❌ No access token returned:", data);
-  }
+
+  if (!data.access_token) {}
 
   return data.access_token;
 }

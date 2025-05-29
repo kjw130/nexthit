@@ -17,7 +17,7 @@ export async function cleanTrackInput(title: string, artist: string) {
   try {
     return JSON.parse(data.choices[0].message.content);
   } catch {
-    console.error("🛑 Failed to parse GPT cleaned input:", data.choices[0].message.content);
+
     return { title, artist }; // fallback to user input
   }
 }

@@ -1,7 +1,6 @@
 export async function getValidYouTubeVideoId(query: string): Promise<string | null> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    console.error("❌ Missing YOUTUBE_API_KEY");
     return null;
   }
 

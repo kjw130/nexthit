@@ -25,14 +25,14 @@ async function generateSongSuggestions(title: string, artist: string): Promise<{
   });
 
   const raw = completion.choices[0].message.content ?? '';
-  console.log('🧠 GPT raw output:', raw);
+
 
   let parsed: { title: string; artist: string }[] = [];
 
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    console.warn('⚠️ GPT output not valid JSON. Trying fallback parse...');
+  
     parsed = raw
       .split('\n')
       .map((line) => line.replace(/^[-*\d.]+\s*/, '').trim())
@@ -52,7 +52,7 @@ async function generateSongSuggestions(title: string, artist: string): Promise<{
 
 export async function POST(req: NextRequest) {
   const { title, artist } = await req.json();
-  console.log('🎵 Request received:', title, artist);
+
 
   if (containsProfanity(title) || containsProfanity(artist)) {
     console.warn('🚫 Profanity detected. Rejecting request.');
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const suggestions = await generateSongSuggestions(title, artist);
-  console.log('📜 Cleaned suggestions:', suggestions);
+
 
   const results = [];
 
@@ -76,14 +76,14 @@ export async function POST(req: NextRequest) {
           artist: song.artist,
           youtubeEmbedUrl: embedUrl,
         });
-        console.log(`✅ Found embed: ${embedUrl} for ${song.title} - ${song.artist}`);
+   
       } else {
         console.warn(`❌ No valid YouTube video found for ${song.title} - ${song.artist}`);
       }
 
       if (results.length >= 1) break;
     } catch (err: any) {
-      console.error(`❌ YouTube API failed:`, err?.message || err);
+      
 
       // YouTube quota or key error
       const message = err?.message?.toLowerCase();
