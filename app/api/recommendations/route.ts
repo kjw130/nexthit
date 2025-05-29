@@ -8,21 +8,39 @@ function getOpenAIClient() {
 }
 
 async function generateSongSuggestions(title: string, artist: string): Promise<{ title: string; artist: string; }[]> {
-  const prompt = `Suggest 3 songs that are similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of (Those) songs where you encounter once a month and it causes you to keep replaying and replaying because it clicks and they love it so much. This query is to find new songs that fit that bill. Respond as a JSON array of { "title": string, "artist": string }.`;
+  const prompt = `Suggest 3 songs that are similar to "${title}" by "${artist}". The context is that this song is inputted by the user as one of those emotionally resonant "replay for weeks" tracks. Return ONLY a JSON array of {"title": string, "artist": string}, no other text.`;
+
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const raw = completion.choices[0].message.content || '';
-  return raw.split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [songTitle, ...rest] = line.split(' - ');
-      return { title: songTitle.trim(), artist: rest.join(' - ').trim() };
-    });
+  const raw = completion.choices[0].message.content ?? '';
+  console.log('🧠 GPT raw output:', raw);
+
+  let parsed: { title: string; artist: string }[] = [];
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    console.warn('⚠️ GPT output not valid JSON. Trying fallback parse...');
+
+    parsed = raw
+      .split('\n')
+      .map((line) => line.replace(/^[-*\d.]+\s*/, '').trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [titlePart, ...artistParts] = line.split(' - ');
+        return {
+          title: titlePart.trim(),
+          artist: artistParts.join(' - ').trim(),
+        };
+      })
+      .filter((s) => s.title && s.artist);
+  }
+
+  return parsed;
 }
 
 export async function POST(req: NextRequest) {
@@ -30,7 +48,7 @@ export async function POST(req: NextRequest) {
   console.log('🎵 Request received:', title, artist);
 
   const suggestions = await generateSongSuggestions(title, artist);
-  console.log('📜 GPT suggestions:', suggestions);
+  console.log('📜 Cleaned suggestions:', suggestions);
 
   const results = [];
   for (const song of suggestions) {

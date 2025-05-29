@@ -15,18 +15,25 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     return id;
   })();
 
-await fetch('https://script.google.com/macros/s/AKfycbzbeSGj9o4j_NLCjhfqz5qmNIvMvkP0hDYLAjwnt9gcgvJ8NcG0RgEgZcV7Iy-F5tPE4Q/exec', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/x-www-form-urlencoded',
-  },
-  body: new URLSearchParams({
-    eventType,
-    sessionId,
-    songId,
-    details,
-  }),
-});
+const logMetric = async (eventType: string, songId = '', details = '') => {
+  const sessionId = localStorage.getItem('session-id') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('session-id', id);
+    return id;
+  })();
+
+  await fetch('/api/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      eventType,
+      sessionId,
+      songId,
+      details,
+    }),
+  });
+};
+
 
 };
 
