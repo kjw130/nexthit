@@ -194,7 +194,7 @@ export default function Home() {
         <div className="text-center bg-zinc-800 p-6 rounded-xl w-full max-w-xl mt-6">
           <p className="text-red-400 font-semibold text-lg mb-4">We’ve reached our daily API limit.</p>
           <p className="text-gray-300 mb-4">
-            Unfortunately we’ve hit our free-tier YouTube API cap for the day. Please try again tomorrow.
+            Unfortunately we’ve hit our API cap for the day. Please try again tomorrow. <br/>
             If you'd like to get notified about project updates or expanded availability, leave your email below.
           </p>
 
