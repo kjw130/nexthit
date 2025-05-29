@@ -8,6 +8,8 @@ interface Song {
   youtubeEmbedUrl?: string;
 }
 
+const METRIC_TOKEN = process.env.NEXT_PUBLIC_METRIC_TOKEN!;
+
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const now = Date.now();
   let userId = localStorage.getItem('user-id');
@@ -31,7 +33,7 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-METRIC-TOKEN': process.env.NEXT_PUBLIC_METRIC_TOKEN || ''
+        'X-METRIC-TOKEN': METRIC_TOKEN
       },
       body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
     });
