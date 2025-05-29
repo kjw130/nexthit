@@ -8,7 +8,6 @@ interface Song {
   youtubeEmbedUrl?: string;
 }
 
-// ✅ Debug-enhanced logging function
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const sessionId = localStorage.getItem('session-id') || (() => {
     const id = crypto.randomUUID();
@@ -16,13 +15,7 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     return id;
   })();
 
-  const payload = {
-    eventType,
-    sessionId,
-    songId,
-    details,
-  };
-
+  const payload = { eventType, sessionId, songId, details };
   console.log('📤 Logging metric:', payload);
 
   try {
@@ -39,7 +32,6 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
   }
 };
 
-
 export default function Home() {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -47,11 +39,12 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  const currentSong = recommendations[currentIndex];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasSubmitted(true);
     setCurrentIndex(0);
-
     logMetric('search', '', `title: ${title}, artist: ${artist}`);
 
     try {
@@ -63,11 +56,9 @@ export default function Home() {
 
       const { results } = await res.json();
       console.log('🟢 Received results from API:', results);
-
       if (!results || results.length === 0) {
         console.warn('⚠️ No recommendations returned from API.');
       }
-
       setRecommendations(results || []);
     } catch (error) {
       console.error('❌ Error fetching recommendations:', error);
@@ -76,7 +67,7 @@ export default function Home() {
   };
 
   const handleVote = (liked: boolean) => {
-    const currentSong = recommendations[currentIndex];
+    if (!currentSong) return;
     console.log(`🗳️ Voted ${liked ? 'Hit' : 'Miss'} for ${currentSong.title} by ${currentSong.artist}`);
     logMetric('vote', currentSong.title, liked ? 'liked' : 'disliked');
 
@@ -86,8 +77,6 @@ export default function Home() {
 
     setCurrentIndex((prev) => prev + 1);
   };
-
-  const currentSong = recommendations[currentIndex];
 
   useEffect(() => {
     logMetric('visit');
@@ -117,7 +106,6 @@ export default function Home() {
         Give us a song you love and we’ll find your next favourite song
       </p>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 mb-12 w-full max-w-md">
         <input
           type="text"
@@ -141,7 +129,6 @@ export default function Home() {
         </button>
       </form>
 
-      {/* Results */}
       {hasSubmitted && currentSong ? (
         <div className="w-full max-w-xl bg-zinc-800 rounded-xl p-6 flex flex-col gap-4 items-center">
           <div className="text-center">
@@ -166,17 +153,10 @@ export default function Home() {
           )}
 
           <div className="flex justify-between w-full mt-4">
-            <button
-              onClick={() => handleVote(false)}
-              className="text-red-400 hover:text-red-500 font-bold text-lg"
-            >
+            <button onClick={() => handleVote(false)} className="text-red-400 hover:text-red-500 font-bold text-lg">
               Miss
             </button>
-
-            <button
-              onClick={() => handleVote(true)}
-              className="text-green-400 hover:text-green-500 font-bold text-lg"
-            >
+            <button onClick={() => handleVote(true)} className="text-green-400 hover:text-green-500 font-bold text-lg">
               Hit
             </button>
           </div>
