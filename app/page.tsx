@@ -10,12 +10,15 @@ interface Song {
 
 const METRIC_TOKEN = process.env.NEXT_PUBLIC_METRIC_TOKEN!;
 
+
 const logMetric = async (eventType: string, songId = '', details = '') => {
   const now = Date.now();
+
   let userId = localStorage.getItem('user-id');
   if (!userId) {
     userId = crypto.randomUUID();
     localStorage.setItem('user-id', userId);
+    console.log('[Metric] New user ID generated:', userId);
   }
 
   const sessionData = localStorage.getItem('session-data');
@@ -27,19 +30,42 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
     sessionId = crypto.randomUUID();
   }
   localStorage.setItem('session-data', JSON.stringify({ id: sessionId, timestamp: now }));
+  console.log('[Metric] Session ID:', sessionId);
+
+  const payload = {
+    eventType,
+    userId,
+    sessionId,
+    songId,
+    details,
+  };
+
+  console.log('[Metric] Sending event:', payload);
+  console.log('[Metric] Token:', METRIC_TOKEN);
 
   try {
     const res = await fetch('/api/log', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-METRIC-TOKEN': METRIC_TOKEN
+        'X-METRIC-TOKEN': METRIC_TOKEN,
       },
-      body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
+      body: JSON.stringify(payload),
     });
-    await res.json();
-  } catch (err) {}
+
+    console.log('[Metric] Response status:', res.status);
+
+    const json = await res.json();
+    console.log('[Metric] Response JSON:', json);
+
+    if (!res.ok) {
+      console.warn('[Metric] Metric logging failed:', json);
+    }
+  } catch (err) {
+    console.error('[Metric] Fetch error:', err);
+  }
 };
+
 
 export default function Home() {
   const [title, setTitle] = useState('');
