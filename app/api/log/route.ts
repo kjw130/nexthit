@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
-     console.log('📥 Incoming metric:', { eventType, sessionId, userId, songId, details });
+ 
     const metric = await prisma.metric.create({
       data: {
         eventType,
@@ -33,11 +33,10 @@ export async function POST(req: NextRequest) {
         details: typeof details === 'string' ? details : '',
       },
     });
-    console.log('🧾 Metric saved:', metric);
-
+   
     return NextResponse.json(metric, { status: 200 });
   } catch (error) {
-    console.log('metric failed', error);
+  
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

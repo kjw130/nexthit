@@ -28,8 +28,6 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
 
   const token = process.env.NEXT_PUBLIC_METRIC_TOKEN; // <- this must be inlined at build time
 
-  console.log('[Metric] Token:', token); // Check this prints the right token
-
   try {
     const res = await fetch('/api/log', {
       method: 'POST',
@@ -40,11 +38,10 @@ const logMetric = async (eventType: string, songId = '', details = '') => {
       body: JSON.stringify({ eventType, userId, sessionId, songId, details }),
     });
 
-    console.log('[Metric] Response status:', res.status);
     const json = await res.json();
-    console.log('[Metric] Response JSON:', json);
+
   } catch (err) {
-    console.log('[Metric] Metric logging failed:', err);
+
   }
 };
 
