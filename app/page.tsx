@@ -139,16 +139,21 @@ export default function Home() {
     setEmail('');
   };
 
-  useEffect(() => {
-    logMetric('visit');
-    const start = Date.now();
-    const handleUnload = () => {
-      const duration = Math.floor((Date.now() - start) / 1000);
-      logMetric('time_on_site', '', `${duration}s`);
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, []);
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const source = params.get('source') || 'direct';
+  logMetric('visit', '', `source=${source}`);
+
+  const start = Date.now();
+  const handleUnload = () => {
+    const duration = Math.floor((Date.now() - start) / 1000);
+    logMetric('time_on_site', '', `${duration}s`);
+  };
+
+  window.addEventListener('beforeunload', handleUnload);
+  return () => window.removeEventListener('beforeunload', handleUnload);
+}, []);
+
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center px-4 py-16">
